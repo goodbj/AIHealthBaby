@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="health_green">#34C759</color>
+    <color name="medical_blue">#007AFF</color>
+    <color name="warning_orange">#FF9500</color>
+    <color name="danger_red">#FF3B30</color>
+    <color name="text_primary">#1C1C1E</color>
+    <color name="text_secondary">#3C3C43</color>
+    <color name="text_tertiary">#8E8E93</color>
+    <color name="background">#F2F2F7</color>
+    <color name="surface">#FFFFFF</color>
+</resources>
