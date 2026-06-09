@@ -1,6 +1,10 @@
 package com.yikangbao.app.ui.screens.home
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,14 +15,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.yikangbao.app.ui.components.HealthCard
-import com.yikangbao.app.ui.components.LoadingIndicator
-import com.yikangbao.app.ui.components.QuickActionChip
-import com.yikangbao.app.ui.components.VoiceInputButton
+import com.yikangbao.app.ui.components.*
 import com.yikangbao.app.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -28,7 +30,39 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var isRecording by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    // 权限请求
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            viewModel.startVoiceInput()
+        } else {
+            viewModel.clearError()
+        }
+    }
+
+    var showPermissionDialog by remember { mutableStateOf(false) }
+
+    // 处理导航
+    LaunchedEffect(uiState.navigateTo) {
+        uiState.navigateTo?.let { destination ->
+            when {
+                destination.startsWith("chat") -> onNavigateToChat()
+            }
+            viewModel.clearNavigation()
+        }
+    }
+
+    // 显示命令结果消息
+    uiState.commandMessage?.let { message ->
+        LaunchedEffect(message) {
+            // 短暂显示后清除
+            kotlinx.coroutines.delay(3000)
+            viewModel.clearCommandMessage()
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -155,14 +189,42 @@ fun HomeScreen(
                         .fillMaxWidth()
                         .padding(vertical = 32.dp)
                 ) {
-                    VoiceInputButton(
-                        onClick = {
-                            isRecording = !isRecording
-                            if (!isRecording) {
-                                onNavigateToChat()
+                    VoiceInputButtonV2(
+                        isListening = uiState.voiceState.isListening,
+                        isProcessing = uiState.voiceState.isProcessing,
+                        amplitude = uiState.voiceState.amplitude,
+                        statusText = uiState.voiceState.statusText,
+                        onPress = {
+                            if (ContextCompat.checkSelfPermission(
+                                    context,
+                                    Manifest.permission.RECORD_AUDIO
+                                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                            ) {
+                                viewModel.startVoiceInput()
+                            } else {
+                                showPermissionDialog = true
                             }
                         },
-                        isRecording = isRecording
+                        onRelease = {
+                            viewModel.stopVoiceInput()
+                        },
+                        modifier = Modifier.pointerInput(Unit) {
+                            detectTapGestures(
+                                onPress = {
+                                    if (ContextCompat.checkSelfPermission(
+                                            context,
+                                            Manifest.permission.RECORD_AUDIO
+                                        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                    ) {
+                                        viewModel.startVoiceInput()
+                                        tryAwait()
+                                        viewModel.stopVoiceInput()
+                                    } else {
+                                        showPermissionDialog = true
+                                    }
+                                }
+                            )
+                        }
                     )
                 }
 
@@ -177,7 +239,51 @@ fun HomeScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 32.dp)
                 )
+
+                // Command Result Message
+                uiState.commandMessage?.let { message ->
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = HealthGreen.copy(alpha = 0.1f),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp)
+                    ) {
+                        Text(
+                            text = message,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = HealthGreen,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                }
             }
+        }
+    }
+
+    // Permission Dialog
+    if (showPermissionDialog) {
+        PermissionRationaleDialog(
+            onDismiss = { showPermissionDialog = false },
+            onConfirm = {
+                showPermissionDialog = false
+                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            }
+        )
+    }
+
+    // Error Snackbar
+    uiState.error?.let { error ->
+        Snackbar(
+            modifier = Modifier.padding(16.dp),
+            action = {
+                TextButton(onClick = { viewModel.clearError() }) {
+                    Text("关闭")
+                }
+            }
+        ) {
+            Text(error)
         }
     }
 }
