@@ -9,4 +9,8 @@ sealed class Screen(val route: String) {
     data object RecordDetail : Screen("record/{recordId}") {
         fun createRoute(recordId: String) = "record/$recordId"
     }
+
+    companion object {
+        val entries = listOf(Home, Chat, Records, Reminder, Profile, RecordDetail)
+    }
 }
