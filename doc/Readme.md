@@ -1,4 +1,4 @@
-好的，我将根据你的原始需求和我提出的扩展建议，整理成一份**结构完整、可直接交给AI智能体进行编码的需求文档**。文档会包含功能模块、数据模型、API设计、扩展接口要求，并明确要求生成**可直接运行的代码**。
+文档会包含功能模块、数据模型、API设计、扩展接口要求，并明确要求生成**可直接运行的代码**。
 
 ---
 
@@ -83,6 +83,28 @@
   - 最近3条AI对话摘要
   - 紧急联系人信息
 - 升级付费版：子女每周收到《健康周报》+ 异常指标预警
+
+#### 2.1.8 分享机制
+- 支持分享任意健康档案、AI对话、健康报告到微信/短信
+- 生成带有效期的分享链接，支持设置查看权限（全部内容/仅摘要）
+- 访客通过链接可直接查看分享内容，无需注册登录
+- 分享记录追踪：记录被查看次数、是否转化为注册用户
+
+#### 2.1.9 推广与积分系统
+- 每位用户拥有专属推广链接（`/invite/{user_id}/{unique_code}`）
+- 新用户通过推广链接注册并完成首次病历上传后：
+  - 推广人获得积分奖励
+  - 新注册用户获得新人积分
+- 积分获取渠道：
+  - 邀请好友注册：+20积分/人
+  - 首次上传病历：+10积分
+  - 每日登录：+1积分
+  - 完成健康评估：+5积分
+- 积分兑换：
+  - 兑换健康报告解读服务
+  - 兑换在线问诊优惠券
+  - 兑换体检套餐折扣券
+  - 积分提现（满100积分可提现，1积分=0.1元）
 
 ### 2.2 后台管理系统（Web端）
 
@@ -174,6 +196,55 @@
 | link_url | string | 跳转链接 |
 | callback_url | string | 点击回调统计接口 |
 
+### 3.6 分享记录表 `shares`
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | string | |
+| user_id | string | 分享者ID |
+| target_type | string | record/conversation/report |
+| target_id | string | 被分享内容ID |
+| share_code | string | 唯一分享码 |
+| permission_level | string | full/summary（完整/摘要） |
+| expire_at | timestamp | 过期时间 |
+| view_count | int | 被查看次数 |
+| converted_user_id | string | 转化的用户ID |
+| created_at | timestamp | |
+
+### 3.7 用户积分表 `user_points`
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | string | |
+| user_id | string | |
+| total_points | int | 当前总积分 |
+| available_points | int | 可兑换积分（扣除已锁定） |
+| locked_points | int | 锁定中积分（提现审核中） |
+| created_at | timestamp | |
+| updated_at | timestamp | |
+
+### 3.8 积分变动记录表 `point_transactions`
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | string | |
+| user_id | string | |
+| type | string | earn/spend/withdraw/refund |
+| amount | int | 积分变动数量 |
+| reason | string | 变动原因（如"邀请注册奖励"） |
+| related_id | string | 关联ID（如邀请记录ID） |
+| status | string | pending/confirmed/cancelled |
+| created_at | timestamp | |
+
+### 3.9 推广记录表 `referrals`
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | string | |
+| referrer_id | string | 推广人ID |
+| referral_code | string | 专属推广码 |
+| referred_user_id | string | 被推广人ID |
+| status | string | registered/verified/completed |
+| reward_points | int | 奖励积分 |
+| created_at | timestamp | |
+| completed_at | timestamp | 完成时间 |
+
 ---
 
 ## 4. 核心API接口设计（留出扩展钩子）
@@ -219,6 +290,103 @@ Response: {
 #### 4.1.4 获取主动提醒列表
 ```
 GET /api/reminders?user_id={}&status=pending
+```
+
+#### 4.1.5 生成分享链接
+```
+POST /api/shares/create
+Headers: Authorization: Bearer {token}
+Body: {
+  target_type: "record",  // record/conversation/report
+  target_id: "rec_123",
+  permission_level: "summary",  // full/summary
+  expire_days: 7
+}
+Response: {
+  share_url: "https://yikangbao.com/share/{share_code}",
+  share_code: "abc123",
+  expire_at: "2026-07-01T12:00:00"
+}
+```
+
+#### 4.1.6 通过分享链接查看内容
+```
+GET /api/shares/{share_code}
+Response: {
+  target_type: "record",
+  data: {...},  // 分享的内容数据
+  permission_level: "summary",
+  expire_at: "2026-07-01T12:00:00"
+}
+```
+
+#### 4.1.7 获取用户积分信息
+```
+GET /api/points?user_id={}
+Headers: Authorization: Bearer {token}
+Response: {
+  total_points: 150,
+  available_points: 150,
+  locked_points: 0,
+  transactions: [...]
+}
+```
+
+#### 4.1.8 积分兑换
+```
+POST /api/points/exchange
+Headers: Authorization: Bearer {token}
+Body: {
+  exchange_type: "coupon",  // coupon/service/withdraw
+  amount: 50,
+  target_id: "coupon_123"  // 兑换目标ID
+}
+Response: {
+  success: true,
+  message: "兑换成功",
+  remaining_points: 100
+}
+```
+
+#### 4.1.9 积分提现
+```
+POST /api/points/withdraw
+Headers: Authorization: Bearer {token}
+Body: {
+  amount: 100,
+  bank_info: {...}  // 银行卡信息
+}
+Response: {
+  success: true,
+  message: "提现申请已提交，将在3个工作日内到账",
+  transaction_id: "tx_123"
+}
+```
+
+#### 4.1.10 获取推广链接
+```
+GET /api/referrals/link?user_id={}
+Headers: Authorization: Bearer {token}
+Response: {
+  referral_link: "https://yikangbao.com/invite/{user_id}/{referral_code}",
+  referral_code: "YKBTST123",
+  invited_count: 5,
+  reward_points: 100
+}
+```
+
+#### 4.1.11 通过推广链接注册
+```
+POST /api/auth/register
+Body: {
+  phone: "13800138000",
+  referral_code: "YKBTST123"  // 可选，推广码
+}
+Response: {
+  user_id: "user_123",
+  token: "...",
+  new_user_points: 10  // 新人奖励积分
+}
 ```
 
 ### 4.2 后台管理接口
