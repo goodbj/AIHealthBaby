@@ -45,6 +45,15 @@ sealed class VoiceCommand {
     // 上传病历
     object UploadRecord : VoiceCommand()
     
+    // 分享功能
+    data class ShareRecord(
+        val targetType: String,      // record/conversation/report
+        val targetId: String = "",   // 目标ID，默认空表示分享当前
+        val userId: String = "mock_user_001",  // 当前用户ID
+        val permissionLevel: String = "summary",  // full/summary
+        val expireDays: Int = 7      // 有效期天数
+    ) : VoiceCommand()
+    
     // AI对话
     data class ChatQuestion(val question: String) : VoiceCommand()
     
@@ -113,6 +122,9 @@ class VoiceCommandParser {
             // 上传病历: "上传病历" "拍照上传"
             normalizedText.contains("上传") && (normalizedText.contains("病历") || normalizedText.contains("报告")) ->
                 ParsedCommand(UploadRecord, 1.0f, text)
+            
+            // 分享功能: "分享我的健康报告" "把病历分享给子女"
+            normalizedText.contains("分享") -> parseShareCommand(normalizedText, text)
             
             // 帮助: "帮帮我" "怎么用"
             normalizedText.contains("帮帮我") || normalizedText.contains("怎么用") || normalizedText.contains("帮助") ->
@@ -253,5 +265,36 @@ class VoiceCommandParser {
             else -> "全科"
         }
         return ParsedCommand(BookAppointment(department), 1.0f, original)
+    }
+
+    private fun parseShareCommand(normalized: String, original: String): ParsedCommand {
+        val targetType = when {
+            normalized.contains("健康报告") || normalized.contains("报告") -> "report"
+            normalized.contains("病历") || normalized.contains("档案") -> "record"
+            normalized.contains("对话") || normalized.contains("聊天") -> "conversation"
+            else -> "report"
+        }
+        
+        val permissionLevel = if (normalized.contains("完整")) "full" else "summary"
+        
+        val expireDays = when {
+            normalized.contains("三天") || normalized.contains("3天") -> 3
+            normalized.contains("七天") || normalized.contains("7天") || normalized.contains("一周") -> 7
+            normalized.contains("十天") || normalized.contains("10天") -> 10
+            normalized.contains("半个月") -> 15
+            normalized.contains("一个月") || normalized.contains("30天") -> 30
+            else -> 7
+        }
+        
+        return ParsedCommand(
+            ShareRecord(
+                targetType = targetType,
+                userId = "mock_user_001",
+                permissionLevel = permissionLevel,
+                expireDays = expireDays
+            ),
+            0.9f,
+            original
+        )
     }
 }
