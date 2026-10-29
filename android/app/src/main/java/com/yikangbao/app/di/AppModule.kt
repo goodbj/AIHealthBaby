@@ -25,7 +25,10 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    private const val BASE_URL = "https://api.yikangbao.com/"
+    // Configured via android/gradle.properties (BASE_URL) and overridable in
+    // android/local.properties. Falls back to a local dev server.
+    private const val BASE_URL =
+        if (BuildConfig.BASE_URL.isNotBlank()) BuildConfig.BASE_URL else "http://10.0.2.2:8000/"
 
     @Provides
     @Singleton

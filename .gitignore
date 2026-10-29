@@ -1,18 +1,50 @@
-# Build and Release Folders
-bin-debug/
-bin-release/
-[Oo]bj/
-[Bb]in/
+# ─────────────── Android ───────────────
+*.iml
+.gradle/
+.idea/
+/local.properties
+.DS_Store
+/build
+/captures
+.externalNativeBuild/
+.cxx/
 
-# Other files and folders
-.settings/
+# Android app build outputs
+android/app/build/
+android/build/
 
-# Executables
-*.swf
-*.air
-*.ipa
-*.apk
+# ─────────────── Python ───────────────
+# (kept ready for the planned FastAPI backend; do NOT ignore source)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+.eggs/
 
-# Project files, i.e. `.project`, `.actionScriptProperties` and `.flexProperties`
-# should NOT be excluded as they contain compiler settings and other important
-# information for Eclipse / Flash Builder.
+# Local secrets / credentials / session tokens
+.env
+*.local
+token.json
+session/
+credentials*
+
+# ─────────────── OS / editor ───────────────
+Thumbs.db
+.DS_Store
+*.swp
+*~
+
+# ─────────────── Legacy (from original template) ───────────────
+# Left intentionally empty: ActionScript/Flex ignores were removed.
+# bin-debug/ bin-release/ [Oo]bj/ [Bb]in/ *.swf *.air *.ipa *.apk .settings/

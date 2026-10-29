@@ -20,6 +20,10 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        // Backend base URL, sourced from android/gradle.properties (BASE_URL)
+        // or android/local.properties. Must end with a slash.
+        buildConfigField("String", "BASE_URL", "\"${project.findProperty("BASE_URL") ?: "http://10.0.2.2:8000/"}\"")
     }
 
     buildTypes {
@@ -43,6 +47,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     composeOptions {
