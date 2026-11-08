@@ -22,7 +22,7 @@ zone: project
 | 本节点显示名 | 08-AIHealthBaby 颐康宝部门协调员 |
 | 本节点绝对路径 | `E:\AI\orca-worktrees\08_AIHealthBaby\AIHealthBaby_08_00` |
 | 本节点协调信道 ID | `run_2de824fbf1ad`（开工必 `run-use` 认领） |
-| 直属上层节点 | `00_01`（公共簇信箱 `run_7faa77b4b232`） |
+| 直属上层节点 | `00_01`（公共簇信箱 `run_1cd4e1700daf`） |
 | 本节点容器仓 | `E:/AI/orca-worktrees/08_AIHealthBaby/AIHealthBaby`（早期 clone 上游，按「快照先不动」红线保留为容器仓） |
 | 直辖下层节点 | `08_02~08_04`（子项目主管 / 执行层，按需建；XX_00 本职即分发器，不设 `_01`） |
 | **本节点部门点位（记忆库）** | `知识库/08-AIHealthBaby-颐康宝/部门卡片.md` ← 部门特点/用处/用法/主管/信道全在这，薄壳只挂指针 |
@@ -38,7 +38,7 @@ zone: project
 
 - 走本节点专属 Run 邮箱 `run_2de824fbf1ad`；开工第一件事 `orca orchestration run-use --id run_2de824fbf1ad` 认领，治 `consumer_fenced`。
 - 收信 `orca orchestration check --run run_2de824fbf1ad --json`，处理完 `--ack <deliveryId>` 才能收下一批（FIFO 卡批）。
-- 找 00_01 公共簇投 `run_7faa77b4b232`。
+- 找 00_01 公共簇投 `run_1cd4e1700daf`。
 - 任务板巡检：`gh issue list --repo goodbj/AI_Memory --state open --label "部门-08 AIHealthBaby"` 看派给本部门的活；领到的在本部门仓库建 issue 跟踪。
 
 ## 铁律（灵魂已有，此处只复述红线）
