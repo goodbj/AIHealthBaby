@@ -38,3 +38,22 @@ def test_load_llm_config_fallback(tmp_path, monkeypatch):
     monkeypatch.setattr("app.config.get_settings", lambda: type("S", (), {"llm_config_path": str(tmp_path / "nope.json")})())
     cfg = load_llm_config()
     assert cfg["active_model"] == "deepseek"
+
+
+def test_chat_endpoint_end_to_end(client):
+    """端到端：POST /api/chat → LLM（离线桩）→ 回复含免责声明。"""
+    r = client.post("/api/chat", json={"prompt": "最近总是睡不好，怎么调理？"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["code"] == 0
+    assert body["data"]["model"] == "deepseek-chat"
+    assert body["data"]["disclaimer"] is True
+    assert "不构成医疗建议" in body["data"]["reply"]
+
+
+def test_chat_endpoint_empty_prompt(client):
+    """空 prompt 走统一失败封装，不打到 LLM。"""
+    r = client.post("/api/chat", json={"prompt": "   "})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["code"] == 1001 and "不能为空" in body["msg"]

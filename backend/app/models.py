@@ -34,6 +34,8 @@ class User(Base):
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=_uuid)
     phone: Mapped[str] = mapped_column(String(32), unique=True, index=True)
     name: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # 账号状态：active 正常 / disabled 已禁用（M3 后台管理）
+    status: Mapped[str] = mapped_column(String(16), default="active", server_default="active")
     emergency_contact_phone: Mapped[str | None] = mapped_column(String(32), nullable=True)
     children_ids: Mapped[list] = mapped_column(JSON, default=list)
     tenant_id: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)
@@ -93,3 +95,40 @@ class HealthIndicator(Base):
     type: Mapped[str] = mapped_column(String(32), index=True)
     value: Mapped[str] = mapped_column(String(64))
     record_date: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+# ==================== M3 后台管理 ====================
+
+class AdminUser(Base):
+    """后台管理员（PRD 2.2：运营用 Web 管理端）。
+
+    密码只存 PBKDF2 哈希（sha256_pw），绝不明文。
+    """
+
+    __tablename__ = "admin_users"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=_uuid)
+    username: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    password_hash: Mapped[str] = mapped_column(String(256))
+    role: Mapped[str] = mapped_column(String(16), default="admin")  # admin/super
+    status: Mapped[str] = mapped_column(String(16), default="active")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class AuditLog(Base):
+    """审计留痕（开发计划第 7 节：所有后台读取/修改留审计）。
+
+    M3 核心：管理员修正病历记录时，修正前后的快照落这里，
+    支撑「修正留痕可复跑」验收——按 log 记录重放修正，可复现同结果。
+    """
+
+    __tablename__ = "audit_logs"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=_uuid)
+    admin_id: Mapped[str] = mapped_column(String(64), index=True)  # 操作管理员
+    action: Mapped[str] = mapped_column(String(64), index=True)  # record_correct / user_disable / ...
+    target_type: Mapped[str] = mapped_column(String(32), default="record")
+    target_id: Mapped[str] = mapped_column(String(64), index=True)  # 被操作对象 ID
+    before_snapshot: Mapped[dict] = mapped_column(JSON, default=dict)
+    after_snapshot: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

@@ -10,6 +10,11 @@ import abc
 import os
 from dataclasses import dataclass
 
+import httpx
+
+# 免责声明：所有面向用户的模型回复必须携带（医疗建议不可替代专业诊疗）。
+DISCLAIMER = "本回复由 AI 生成，仅供参考，不构成医疗建议；如有不适请及时就医并遵医嘱。"
+
 
 @dataclass
 class MedicalExtraction:
@@ -33,7 +38,7 @@ class BaseLLM(abc.ABC):
 
     @abc.abstractmethod
     def chat(self, prompt: str, context: dict | None = None) -> str:
-        """基于 prompt（与可选 context）生成对话回复。"""
+        """基于 prompt（与可选 context）生成对话回复，返回内容必须含免责声明。"""
 
     @abc.abstractmethod
     def extract_medical_info(self, ocr_text: str) -> MedicalExtraction:
@@ -49,23 +54,63 @@ class DeepSeekLLM(BaseLLM):
 
     api_key / base_url 来自 llm_config.json 或环境变量 DEEPSEEK_API_KEY。
     无密钥时进入离线桩模式，返回可预测的占位结果——保证 M0 后端可零依赖跑通与测试。
+    在线模式调用 deepseek-chat（OpenAI 兼容 /chat/completions），超时兜底回落离线桩。
     """
+
+    OFFLINE_PREFIX = "[离线桩]"
 
     def __init__(self, config: dict | None = None) -> None:
         super().__init__(config or {})
         self.api_key = self.config.get("api_key") or os.environ.get("DEEPSEEK_API_KEY", "")
         self.base_url = self.config.get("base_url") or "https://api.deepseek.com/v1"
         self.model = self.config.get("model") or "deepseek-chat"
+        self.timeout = float(self.config.get("timeout_seconds", 30))
         self._online = bool(self.api_key)
+
+    # --- 内部工具 ---
+
+    def _system_prompt(self) -> str:
+        return (
+            "你是颐康宝（YiKangBao）的健康助手，面向家庭用户提供饮食、运动、作息建议。"
+            "回答需通俗易懂、给出可执行建议，并在结尾提醒用户咨询专业医生。"
+        )
+
+    def _offline_reply(self, prompt: str) -> str:
+        return (
+            f"{self.OFFLINE_PREFIX} 关于「{prompt[:20]}」的饮食/运动/作息建议："
+            "请保持规律作息、低盐低脂饮食，并遵医嘱复查。建议咨询您的医生。"
+            + DISCLAIMER
+        )
+
+    def _chat_completions(self, prompt: str, context: dict | None) -> str:
+        """调用 OpenAI 兼容 /chat/completions 接口，返回纯文本回复。"""
+        messages: list[dict] = [{"role": "system", "content": self._system_prompt()}]
+        if context and context.get("history"):
+            messages.extend(context["history"])
+        messages.append({"role": "user", "content": prompt})
+        resp = httpx.post(
+            f"{self.base_url.rstrip('/')}/chat/completions",
+            headers={"Authorization": f"Bearer {self.api_key}"},
+            json={"model": self.model, "messages": messages, "temperature": 0.7},
+            timeout=self.timeout,
+        )
+        resp.raise_for_status()
+        choice = resp.json()["choices"][0]
+        return choice["message"]["content"]
+
+    # --- 对外接口 ---
 
     def chat(self, prompt: str, context: dict | None = None) -> str:
         if not self._online:
-            return (
-                f"[离线桩] 关于「{prompt[:20]}」的饮食/运动/作息建议："
-                "请保持规律作息、低盐低脂饮食，并遵医嘱复查。建议咨询您的医生。"
-            )
-        # 在线调用逻辑（M0 不强制联网，留接口）
-        raise NotImplementedError("DeepSeek 在线调用待接入 httpx 客户端")
+            return self._offline_reply(prompt)
+        try:
+            content = self._chat_completions(prompt, context)
+        except (httpx.HTTPError, KeyError, IndexError, ValueError):
+            # 网络/接口异常兜底：回落离线桩，服务不中断
+            return self._offline_reply(prompt)
+        if DISCLAIMER not in content:
+            content += "\n" + DISCLAIMER
+        return content
 
     def extract_medical_info(self, ocr_text: str) -> MedicalExtraction:
         # M0 离线桩：结构化解析在 M1 接入 OCR + 真实 LLM 后替换
@@ -77,7 +122,7 @@ class DeepSeekLLM(BaseLLM):
         )
 
     def name(self) -> str:
-        return "deepseek-chat"
+        return self.model
 
 
 _REGISTRY: dict[str, type[BaseLLM]] = {"deepseek": DeepSeekLLM}
