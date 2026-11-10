@@ -84,6 +84,8 @@ class Reminder(Base):
     content: Mapped[str] = mapped_column(Text)
     scheduled_time: Mapped[datetime] = mapped_column(DateTime)
     status: Mapped[str] = mapped_column(String(16), default="pending")  # pending/sent/cancelled
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)  # 站内红点：sent+未读计数
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 

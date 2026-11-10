@@ -69,22 +69,37 @@ class DeepSeekLLM(BaseLLM):
 
     # --- 内部工具 ---
 
-    def _system_prompt(self) -> str:
-        return (
+    def _system_prompt(self, profile: dict | None = None) -> str:
+        base = (
             "你是颐康宝（YiKangBao）的健康助手，面向家庭用户提供饮食、运动、作息建议。"
             "回答需通俗易懂、给出可执行建议，并在结尾提醒用户咨询专业医生。"
         )
+        if profile:
+            import json
 
-    def _offline_reply(self, prompt: str) -> str:
+            base += (
+                "\n\n【用户健康档案（仅供个性化建议，不要泄露给第三方）】\n"
+                + json.dumps(profile, ensure_ascii=False, default=str)
+                + "\n建议范围限饮食/运动/作息/复查，不得下诊断或开药。"
+            )
+        return base
+
+    def _offline_reply(self, prompt: str, profile: dict | None = None) -> str:
+        tail = ""
+        if profile and profile.get("recent_records"):
+            diagnoses = [r.get("diagnosis") or "" for r in profile["recent_records"] if r.get("diagnosis")]
+            if diagnoses:
+                tail = f"（结合档案：{'、'.join(diagnoses[:3])}）"
         return (
-            f"{self.OFFLINE_PREFIX} 关于「{prompt[:20]}」的饮食/运动/作息建议："
+            f"{self.OFFLINE_PREFIX} 关于「{prompt[:20]}」的饮食/运动/作息建议{tail}："
             "请保持规律作息、低盐低脂饮食，并遵医嘱复查。建议咨询您的医生。"
             + DISCLAIMER
         )
 
     def _chat_completions(self, prompt: str, context: dict | None) -> str:
         """调用 OpenAI 兼容 /chat/completions 接口，返回纯文本回复。"""
-        messages: list[dict] = [{"role": "system", "content": self._system_prompt()}]
+        profile = context.get("profile") if context else None
+        messages: list[dict] = [{"role": "system", "content": self._system_prompt(profile)}]
         if context and context.get("history"):
             messages.extend(context["history"])
         messages.append({"role": "user", "content": prompt})
@@ -101,13 +116,14 @@ class DeepSeekLLM(BaseLLM):
     # --- 对外接口 ---
 
     def chat(self, prompt: str, context: dict | None = None) -> str:
+        profile = context.get("profile") if context else None
         if not self._online:
-            return self._offline_reply(prompt)
+            return self._offline_reply(prompt, profile)
         try:
             content = self._chat_completions(prompt, context)
         except (httpx.HTTPError, KeyError, IndexError, ValueError):
             # 网络/接口异常兜底：回落离线桩，服务不中断
-            return self._offline_reply(prompt)
+            return self._offline_reply(prompt, profile)
         if DISCLAIMER not in content:
             content += "\n" + DISCLAIMER
         return content

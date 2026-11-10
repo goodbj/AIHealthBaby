@@ -29,7 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
 from ..models import AdminUser, AuditLog, HealthRecord, User
-from . import fail, ok
+from .response import fail, ok
 
 admin_router = APIRouter()
 
@@ -110,8 +110,8 @@ def _auth_fail(msg: str) -> _AuthError:
     return _AuthError(1401, msg)
 
 
-@admin_router.exception_handler(_AuthError)
-async def _auth_error_handler(request: Request, exc: _AuthError):
+async def auth_error_handler(request: Request, exc: _AuthError) -> JSONResponse:
+    """鉴权异常 → 统一响应封装（在 main.py 注册到应用级）。"""
     return fail(exc.code, exc.msg)
 
 
