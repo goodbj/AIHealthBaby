@@ -17,8 +17,10 @@ from ..services.context import build_health_context, context_summary
 from .response import fail, ok
 from .reminders import router as reminders_router
 from .records import router as records_router  # noqa: E402  M1 病历闭环
+from .auth import router as auth_router  # noqa: E402  M1 登录联调配套
 
 api_router = APIRouter()
+api_router.include_router(auth_router)
 api_router.include_router(reminders_router)
 api_router.include_router(records_router, prefix="/records")
 

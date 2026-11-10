@@ -28,17 +28,14 @@ class AuthRepositoryImpl @Inject constructor(
 ) : AuthRepository {
 
     private val accessTokenKey = stringPreferencesKey("access_token")
-    private val refreshTokenKey = stringPreferencesKey("refresh_token")
+    private val userIdKey = stringPreferencesKey("user_id")
 
     override suspend fun loginWithPhone(phone: String, code: String): Result<AuthToken> {
         return try {
-            val response = api.login(LoginRequest(phone, code))
-            if (response.isSuccessful && response.body() != null) {
-                val token = response.body()!!
-                saveTokens(token)
-                Result.success(token)
-            } else {
-                Result.failure(Exception("Login failed: ${response.message()}"))
+            val result = unwrap { api.login(LoginRequest(phone, code)) }
+            result.map { token ->
+                saveToken(token)
+                token
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -46,26 +43,13 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     override suspend fun sendSmsCode(phone: String): Result<Unit> {
-        return try {
-            val response = api.sendSmsCode(SendCodeRequest(phone))
-            if (response.isSuccessful) {
-                Result.success(Unit)
-            } else {
-                Result.failure(Exception("Failed to send code"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        // 演示模式：后端固定验证码（YKB_DEMO_SMS_CODE），无需真实下发
+        return Result.success(Unit)
     }
 
     override suspend fun getCurrentUser(): Result<User> {
         return try {
-            val response = api.getProfile()
-            if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!)
-            } else {
-                Result.failure(Exception("Failed to get user"))
-            }
+            unwrap { api.getProfile() }
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -80,18 +64,25 @@ class AuthRepositoryImpl @Inject constructor(
     override suspend fun logout() {
         context.dataStore.edit { preferences ->
             preferences.remove(accessTokenKey)
-            preferences.remove(refreshTokenKey)
+            preferences.remove(userIdKey)
         }
+        AuthSession.token = null
+        AuthSession.userId = null
     }
 
-    private suspend fun saveTokens(token: AuthToken) {
+    private suspend fun saveToken(token: AuthToken) {
+        AuthSession.token = token.token
+        AuthSession.userId = token.userId
         context.dataStore.edit { preferences ->
-            preferences[accessTokenKey] = token.accessToken
-            preferences[refreshTokenKey] = token.refreshToken
+            preferences[accessTokenKey] = token.token
+            preferences[userIdKey] = token.userId
         }
     }
 
-    suspend fun getAccessToken(): String? {
-        return context.dataStore.data.first()[accessTokenKey]
+    /** 冷启动恢复登录态（MainActivity 先调这个再进 UI）。 */
+    suspend fun restoreSession() {
+        val prefs = context.dataStore.data.first()
+        AuthSession.token = prefs[accessTokenKey]
+        AuthSession.userId = prefs[userIdKey]
     }
 }

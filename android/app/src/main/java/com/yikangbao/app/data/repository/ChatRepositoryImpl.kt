@@ -1,12 +1,13 @@
 package com.yikangbao.app.data.repository
 
+import com.yikangbao.app.data.api.ChatDirectRequest
 import com.yikangbao.app.data.api.YiKangBaoApi
 import com.yikangbao.app.data.model.ChatMessage
 import com.yikangbao.app.data.model.ChatSession
-import com.yikangbao.app.data.model.SendMessageRequest
 import com.yikangbao.app.domain.repository.ChatRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -19,13 +20,24 @@ class ChatRepositoryImpl @Inject constructor(
 
     override suspend fun sendMessage(content: String, sessionId: String?): Result<ChatMessage> {
         return try {
-            val response = api.sendMessage(SendMessageRequest(content, sessionId))
-            if (response.isSuccessful && response.body() != null) {
-                val result = response.body()!!
-                _messagesFlow.emit(result.message)
-                Result.success(result.message)
-            } else {
-                Result.failure(Exception("Failed to send message"))
+            // M0 契约 /api/chat：注入档案由后端按 user_id 完成（M2）
+            val result = unwrap {
+                api.chat(ChatDirectRequest(prompt = content, user_id = AuthSession.userId))
+            }
+            result.map { data ->
+                ChatMessage(
+                    id = UUID.randomUUID().toString(),
+                    sessionId = sessionId ?: "",
+                    userId = AuthSession.userId ?: "",
+                    role = "assistant",
+                    content = data.reply,
+                    voiceUrl = null,
+                    modelUsed = data.model,
+                    tokensUsed = null,
+                    createdAt = ""
+                )
+            }.onSuccess { message ->
+                _messagesFlow.emit(message)
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -33,29 +45,13 @@ class ChatRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getSessions(): Result<List<ChatSession>> {
-        return try {
-            val response = api.getChatSessions()
-            if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!)
-            } else {
-                Result.failure(Exception("Failed to get sessions"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        // sessions 接口 M2 后补：先返回空列表不阻塞 UI
+        return Result.success(emptyList())
     }
 
     override suspend fun getChatHistory(sessionId: String): Result<List<ChatMessage>> {
-        return try {
-            val response = api.getChatHistory(sessionId)
-            if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!)
-            } else {
-                Result.failure(Exception("Failed to get chat history"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        // 历史查询后补：先返回空列表
+        return Result.success(emptyList())
     }
 
     override fun observeMessages(): Flow<ChatMessage> = _messagesFlow

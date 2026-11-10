@@ -27,13 +27,8 @@ class ReminderRepositoryImpl @Inject constructor(
                 notifyMethods = reminder.notifyMethods,
                 priority = reminder.priority
             )
-            val response = api.createReminder(request)
-            if (response.isSuccessful && response.body() != null) {
-                val created = response.body()!!
+            unwrap { api.createReminder(request) }.onSuccess { created ->
                 _remindersFlow.value = _remindersFlow.value + created
-                Result.success(created)
-            } else {
-                Result.failure(Exception("Failed to create reminder"))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -42,13 +37,9 @@ class ReminderRepositoryImpl @Inject constructor(
 
     override suspend fun getReminders(): Result<List<Reminder>> {
         return try {
-            val response = api.getReminders()
-            if (response.isSuccessful && response.body() != null) {
-                val reminders = response.body()!!
+            val userId = AuthSession.userId ?: return Result.failure(Exception("请先登录"))
+            unwrap { api.getReminders(userId) }.onSuccess { reminders ->
                 _remindersFlow.value = reminders
-                Result.success(reminders)
-            } else {
-                Result.failure(Exception("Failed to get reminders"))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -57,15 +48,7 @@ class ReminderRepositoryImpl @Inject constructor(
 
     override suspend fun updateReminder(reminder: Reminder): Result<Unit> {
         return try {
-            val response = api.updateReminder(reminder.id, reminder)
-            if (response.isSuccessful) {
-                _remindersFlow.value = _remindersFlow.value.map {
-                    if (it.id == reminder.id) reminder else it
-                }
-                Result.success(Unit)
-            } else {
-                Result.failure(Exception("Failed to update reminder"))
-            }
+            unwrap { api.updateReminder(reminder.id, reminder) }
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -73,12 +56,8 @@ class ReminderRepositoryImpl @Inject constructor(
 
     override suspend fun deleteReminder(id: String): Result<Unit> {
         return try {
-            val response = api.deleteReminder(id)
-            if (response.isSuccessful) {
+            unwrap { api.deleteReminder(id) }.onSuccess {
                 _remindersFlow.value = _remindersFlow.value.filter { it.id != id }
-                Result.success(Unit)
-            } else {
-                Result.failure(Exception("Failed to delete reminder"))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -87,12 +66,7 @@ class ReminderRepositoryImpl @Inject constructor(
 
     override suspend fun completeReminder(id: String): Result<Unit> {
         return try {
-            val response = api.completeReminder(id)
-            if (response.isSuccessful) {
-                Result.success(Unit)
-            } else {
-                Result.failure(Exception("Failed to complete reminder"))
-            }
+            unwrap { api.completeReminder(id) }
         } catch (e: Exception) {
             Result.failure(e)
         }

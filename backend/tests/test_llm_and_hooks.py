@@ -25,8 +25,9 @@ def test_deepseek_name():
 
 
 def test_extract_medical_info_offline():
+    """M1 起离线桩升级为正则兜底：无匹配时 confidence=0.2、结构仍为空。"""
     ex: MedicalExtraction = DeepSeekLLM().extract_medical_info("化验单文本")
-    assert ex.confidence == 0.0 and ex.indicators == []
+    assert ex.confidence == 0.2 and ex.indicators == []
 
 
 def test_get_llm_default_and_switch():

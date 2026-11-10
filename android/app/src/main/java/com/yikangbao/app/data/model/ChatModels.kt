@@ -23,13 +23,3 @@ data class ChatMessage(
     val tokensUsed: Int?,
     val createdAt: String
 )
-
-data class SendMessageRequest(
-    val content: String,
-    val sessionId: String?
-)
-
-data class SendMessageResponse(
-    val message: ChatMessage,
-    val sessionId: String
-)

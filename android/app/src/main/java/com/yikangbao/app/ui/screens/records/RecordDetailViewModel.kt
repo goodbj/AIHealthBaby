@@ -25,7 +25,7 @@ class RecordDetailViewModel @Inject constructor(
 
     fun loadRecord(id: String) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+            _uiState.update { it.copy(isLoading = true, error = null) }
 
             healthRecordRepository.getRecordById(id)
                 .onSuccess { record ->
@@ -33,6 +33,20 @@ class RecordDetailViewModel @Inject constructor(
                 }
                 .onFailure { e ->
                     _uiState.update { it.copy(isLoading = false, error = e.message) }
+                }
+        }
+    }
+
+    /** 确认归档（M1：pending → confirmed）。 */
+    fun confirmRecord() {
+        val current = _uiState.value.record ?: return
+        viewModelScope.launch {
+            healthRecordRepository.confirmRecord(current.id, null)
+                .onSuccess { updated ->
+                    _uiState.update { it.copy(record = updated) }
+                }
+                .onFailure { e ->
+                    _uiState.update { it.copy(error = e.message) }
                 }
         }
     }

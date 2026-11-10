@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.yikangbao.app.data.model.HealthRecord
 import com.yikangbao.app.ui.components.LoadingIndicator
+import com.yikangbao.app.ui.components.RecordUploadSection
 import com.yikangbao.app.ui.theme.HealthGreen
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -34,16 +35,19 @@ fun RecordsScreen(
     ) {
         TopAppBar(
             title = { Text("健康档案") },
-            actions = {
-                IconButton(onClick = { /* TODO: Upload */ }) {
-                    Icon(Icons.Default.Add, contentDescription = "添加")
-                }
-            },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = MaterialTheme.colorScheme.background
             )
         )
 
+        // M1 上传入口：拍照 / 相册 → OCR+LLM 解析 → 确认归档（Issue #180）
+        RecordUploadSection(
+            viewModel = viewModel,
+            onUploadSuccess = { viewModel.loadRecords() },
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
         if (uiState.isLoading && uiState.records.isEmpty()) {
             LoadingIndicator()
         } else if (uiState.records.isEmpty()) {

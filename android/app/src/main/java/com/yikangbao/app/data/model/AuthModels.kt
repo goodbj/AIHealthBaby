@@ -19,10 +19,12 @@ data class HealthProfile(
     val medications: List<String>?
 )
 
+/** 登录响应数据（后端 /api/auth/login：token+userId，M1 演示契约）。 */
 data class AuthToken(
-    val accessToken: String,
-    val refreshToken: String,
-    val expiresIn: Long
+    val token: String,
+    val userId: String,
+    val phone: String,
+    val name: String?
 )
 
 data class LoginRequest(

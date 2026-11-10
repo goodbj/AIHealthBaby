@@ -79,7 +79,7 @@ fun ProfileScreen(
 
                         Column {
                             Text(
-                                text = uiState.user?.name ?: "未设置姓名",
+                                text = uiState.user?.name ?: (if (uiState.isLoggedIn) "未设置姓名" else "未登录"),
                                 style = MaterialTheme.typography.titleLarge
                             )
                             Spacer(modifier = Modifier.height(4.dp))
@@ -90,6 +90,41 @@ fun ProfileScreen(
                             )
                         }
                     }
+                }
+
+                // M1 演示一键登录（未登录时显示）
+                if (!uiState.isLoggedIn) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                "登录后可上传病历、建档对话、收提醒",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Button(
+                                onClick = { viewModel.demoLogin() },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = HealthGreen)
+                            ) {
+                                Text("一键登录（演示模式）")
+                            }
+                            uiState.loginMessage?.let {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(it, style = MaterialTheme.typography.bodySmall)
+                            }
+                            uiState.error?.let {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
 
                 // Settings List

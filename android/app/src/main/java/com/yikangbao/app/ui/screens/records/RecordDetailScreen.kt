@@ -6,9 +6,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
@@ -48,6 +50,16 @@ fun RecordDetailScreen(
 
         if (uiState.isLoading) {
             LoadingIndicator()
+        } else if (uiState.error != null && uiState.record == null) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Text(
+                    uiState.error ?: "加载失败",
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
         } else {
             uiState.record?.let { record ->
                 Column(
@@ -56,141 +68,166 @@ fun RecordDetailScreen(
                         .verticalScroll(rememberScrollState())
                         .padding(16.dp)
                 ) {
-                    // Record Type Card
+                    // 记录头卡：类型 + 日期 + 状态
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                     ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp)
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
-                                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(HealthGreen.copy(alpha = 0.1f)),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(48.dp)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(HealthGreen.copy(alpha = 0.1f)),
-                                    contentAlignment = androidx.compose.ui.Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Description,
-                                        contentDescription = null,
-                                        tint = HealthGreen
+                                Icon(
+                                    imageVector = Icons.Default.Description,
+                                    contentDescription = null,
+                                    tint = HealthGreen
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column {
+                                Text(
+                                    text = record.recordType,
+                                    style = MaterialTheme.typography.titleLarge
+                                )
+                                Text(
+                                    text = record.recordDate,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                AssistChip(
+                                    onClick = {},
+                                    label = {
+                                        Text(
+                                            when (record.status) {
+                                                "confirmed" -> "已确认归档"
+                                                "corrected" -> "已人工修正"
+                                                else -> "待确认"
+                                            }
+                                        )
+                                    },
+                                    colors = AssistChipDefaults.assistChipColors(
+                                        containerColor = if (record.status == "pending")
+                                            MaterialTheme.colorScheme.errorContainer
+                                        else HealthGreen.copy(alpha = 0.15f)
                                     )
-                                }
-                                Spacer(modifier = Modifier.width(16.dp))
-                                Column {
-                                    Text(
-                                        text = record.recordType,
-                                        style = MaterialTheme.typography.titleLarge
-                                    )
-                                    Text(
-                                        text = record.recordDate,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
+                                )
                             }
                         }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Hospital Info
+                    // 诊断
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                     ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp)
-                        ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("诊断结果", style = MaterialTheme.typography.titleMedium)
+                            Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "就诊信息",
-                                style = MaterialTheme.typography.titleMedium
+                                text = record.diagnosis?.ifBlank { null } ?: "（AI 未识别出诊断，可拍照重新上传）",
+                                style = MaterialTheme.typography.bodyLarge
                             )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            InfoRow(label = "医院", value = record.hospitalName ?: "未知")
-                            InfoRow(label = "科室", value = record.department ?: "未知")
-                            InfoRow(label = "医生", value = record.doctorName ?: "未知")
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Diagnosis
-                    record.diagnosis?.let { diagnosis ->
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(16.dp)
-                            ) {
+                            record.confidence?.let {
+                                Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "诊断结果",
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = diagnosis,
-                                    style = MaterialTheme.typography.bodyLarge
+                                    "AI 置信度 ${(it * 100).toInt()}%",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
                     }
 
-                    // Parsed Data
-                    record.parsedData?.let { parsed ->
+                    // 指标
+                    if (record.indicators?.isNotEmpty() == true) {
                         Spacer(modifier = Modifier.height(16.dp))
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                         ) {
-                            Column(
-                                modifier = Modifier.padding(16.dp)
-                            ) {
-                                Text(
-                                    text = "AI 解析结果",
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-                                Spacer(modifier = Modifier.height(12.dp))
-                                parsed.chiefComplaint?.let {
-                                    InfoRow(label = "主诉", value = it)
-                                }
-                                parsed.presentIllness?.let {
-                                    InfoRow(label = "现病史", value = it)
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text("指标", style = MaterialTheme.typography.titleMedium)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                record.indicators.forEach { ind ->
+                                    Row(modifier = Modifier.padding(vertical = 4.dp)) {
+                                        Text(
+                                            ind.name,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            modifier = Modifier.width(110.dp)
+                                        )
+                                        Text(
+                                            "${ind.value}${ind.level?.let { "  （$it）" } ?: ""}",
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                    }
                                 }
                             }
+                        }
+                    }
+
+                    // 用药
+                    if (record.medications?.isNotEmpty() == true) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text("用药", style = MaterialTheme.typography.titleMedium)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                record.medications.forEach { med ->
+                                    Text(
+                                        "· ${med.name}${med.dosage?.takeIf { it.isNotBlank() }?.let { "  $it" } ?: ""}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.padding(vertical = 2.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // OCR 原文
+                    record.ocrRawText?.takeIf { it.isNotBlank() }?.let { raw ->
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text("OCR 原文", style = MaterialTheme.typography.titleSmall)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(raw, style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
+
+                    // 确认归档按钮（pending 才显示）
+                    if (record.status == "pending") {
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Button(
+                            onClick = { viewModel.confirmRecord() },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = HealthGreen)
+                        ) {
+                            Text("确认归档")
                         }
                     }
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun InfoRow(label: String, value: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.width(80.dp)
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium
-        )
     }
 }

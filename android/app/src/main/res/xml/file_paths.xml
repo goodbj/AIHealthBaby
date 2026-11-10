@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- M1 病历拍照上传：相机拍出的照片暂存在 cacheDir/images，经 FileProvider 共享给相机应用 -->
+<paths>
+    <cache-path name="images" path="images/" />
+    <files-path name="records" path="records/" />
+</paths>

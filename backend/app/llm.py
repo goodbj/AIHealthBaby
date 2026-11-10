@@ -128,14 +128,93 @@ class DeepSeekLLM(BaseLLM):
             content += "\n" + DISCLAIMER
         return content
 
-    def extract_medical_info(self, ocr_text: str) -> MedicalExtraction:
-        # M0 离线桩：结构化解析在 M1 接入 OCR + 真实 LLM 后替换
+    _EXTRACT_SYSTEM = (
+        "你是病历结构化助手。从 OCR 文本中提取病历信息，只输出 JSON，不要输出任何其他内容。"
+        'JSON 格式：{"diagnosis": "诊断（无则空字符串）", '
+        '"indicators": [{"name": "指标名", "value": "数值", "level": "正常/偏高/偏低/未知"}], '
+        '"medications": [{"name": "药名", "dosage": "剂量", "frequency": "频次"}], '
+        '"confidence": 0.0~1.0 之间的数字，表示对提取结果的确信度}。'
+    )
+
+    def _offline_extract(self, ocr_text: str) -> MedicalExtraction:
+        """离线桩结构化提取：正则兜底，保证无密钥也能端到端复跑 M1 链路。"""
+        import re
+
+        text = ocr_text or ""
+        # 诊断行：「诊断：xxx」或「诊断为 xxx」
+        diagnosis = ""
+        m = re.search(r"(?:诊\s*断|临床诊断)[：:]\s*(.+)", text)
+        if m:
+            diagnosis = m.group(1).strip()
+        # 指标行：「名称：数值 单位 [偏高/偏低/正常]」
+        indicators: list[dict] = []
+        for line in text.splitlines():
+            lm = re.match(
+                r"\s*([一-龥A-Za-z（）()]{2,12})[：:]\s*([0-9.]+\s*/?\s*[0-9.]*\s*[A-Za-z%/µμ]*.*)",
+                line,
+            )
+            if not lm:
+                continue
+            name, rest = lm.group(1).strip(), lm.group(2).strip()
+            if name in ("姓名", "科室", "性别", "年龄", "电话", "地址", "日期"):
+                continue
+            level = "未知"
+            for kw, lv in (("偏高", "偏高"), ("偏低", "偏低"), ("正常", "正常")):
+                if kw in rest:
+                    level = lv
+                    break
+            indicators.append({"name": name, "value": rest, "level": level})
+        # 用药行：「药名 每次/一次 剂量 频次」或含「mg/片/口服」的行
+        medications: list[dict] = []
+        for line in text.splitlines():
+            if re.search(r"(口服|每次|每日|一次|mg|ml|片|粒|胶囊)", line) and not re.search(
+                r"[：:]", line
+            ):
+                medications.append({"name": line.strip()[:60], "dosage": "", "frequency": ""})
+        confidence = 0.5 if (diagnosis or indicators) else 0.2
         return MedicalExtraction(
-            diagnosis="",
-            indicators=[],
-            medications=[],
-            confidence=0.0,
+            diagnosis=diagnosis,
+            indicators=indicators,
+            medications=medications,
+            confidence=confidence,
         )
+
+    def extract_medical_info(self, ocr_text: str) -> MedicalExtraction:
+        """LLM 结构化提取（M1）：在线调 DeepSeek 提取 JSON，异常回落离线桩。"""
+        import json as _json
+        import re as _re
+
+        if not self._online or not (ocr_text or "").strip():
+            return self._offline_extract(ocr_text)
+        try:
+            resp = httpx.post(
+                f"{self.base_url.rstrip('/')}/chat/completions",
+                headers={"Authorization": f"Bearer {self.api_key}"},
+                json={
+                    "model": self.model,
+                    "messages": [
+                        {"role": "system", "content": self._EXTRACT_SYSTEM},
+                        {"role": "user", "content": ocr_text[:6000]},
+                    ],
+                    "temperature": 0.1,
+                    "response_format": {"type": "json_object"},
+                },
+                timeout=self.timeout,
+            )
+            resp.raise_for_status()
+            content = resp.json()["choices"][0]["message"]["content"]
+            data = _json.loads(content)
+            conf = data.get("confidence", 0.8)
+            conf = min(1.0, max(0.0, float(conf))) if isinstance(conf, (int, float, str)) else 0.8
+            return MedicalExtraction(
+                diagnosis=str(data.get("diagnosis") or "")[:255],
+                indicators=data.get("indicators") if isinstance(data.get("indicators"), list) else [],
+                medications=data.get("medications") if isinstance(data.get("medications"), list) else [],
+                confidence=conf,
+            )
+        except (httpx.HTTPError, KeyError, IndexError, ValueError, TypeError):
+            # 网络/JSON 解析异常兜底：回落离线正则桩，链路不中断
+            return self._offline_extract(ocr_text)
 
     def name(self) -> str:
         return self.model
