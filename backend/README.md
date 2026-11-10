@@ -1,6 +1,6 @@
-# 颐康宝后端（FastAPI）— M0 基础设施
+# 颐康宝后端（FastAPI）— M0 基础设施 + M2 对话提醒 + M3 后台管理
 
-> 真源 PRD：`../doc/Readme.md` 第 5/7 节。开发计划：见 `知识库/08-AIHealthBaby-颐康宝/08_00_开发计划.md` 的 M0 里程碑。
+> 真源 PRD：`../doc/Readme.md` 第 5/7 节。开发计划：见 `知识库/08-AIHealthBaby-颐康宝/08_00_开发计划.md` 的里程碑表。
 
 ## 现状（M0 交付物）
 - FastAPI 应用骨架（`app/main.py`），`uvicorn app.main:app` 可启动
@@ -34,8 +34,20 @@ PYTHONPATH=. alembic revision --autogenerate -m "desc"   # 模型变更后生成
 
 ## 测试
 ```bash
-PYTHONPATH=. pytest -q      # M0 验收：≥10 用例全绿（当前 17）
+PYTHONPATH=. pytest -q      # 当前 48 用例全绿（M0 17 + M1/M2 + M3 15）
 ```
+
+## M3 后台管理基础版（Issue #182）
+
+- **Web 管理端**：服务启动后打开 `http://localhost:8000/admin`（单文件 `static/admin.html`，登录即用）
+- **默认管理员**：`admin` / `YKB_ADMIN_PASSWORD`（默认 `admin123`，仅开发/演示；生产必设强口令并换 `YKB_JWT_SECRET`）
+- **API 前缀** `/api/admin/*`，均需 Bearer JWT（登录 `POST /api/admin/login` 签发，12h 有效）：
+  - 用户管理：`GET /users`（关键词/状态筛选分页）、`POST /users/{id}/disable|enable`、`GET /users/export`（CSV，手机号脱敏）、`GET /users/{id}/timeline`（档案时间轴）
+  - 病历解析记录：`GET /records`、`GET /records/{id}`、`POST /records/{id}/correct`（人工修正，corrected_by 留痕 + before/after 审计快照）
+  - 低置信度报警：`GET /alerts/low-confidence`（默认 confidence < 0.7，升序最可疑在前）
+  - 审计留痕：`GET /audit-logs`、`POST /audit-logs/{id}/replay`（**复跑**：按 after_snapshot 重放修正并比对，matched=true 即复现同结果）
+  - 基础统计：`GET /stats`
+- **验收对照**（开发计划第 8 节 M3）：管理员修正一条记录 → `corrected_by` 留痕 ✓；低置信度报警可见 ✓；修正留痕可复跑（replay 端点 + `test_admin_m3.py` 覆盖）✓
 
 ## 与 Android 客户端联调
 Android 端（`../android`）默认基地址 `http://10.0.2.2:8000/`（模拟器访问宿主机）。

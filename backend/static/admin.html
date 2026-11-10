@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>颐康宝后台管理</title>
+<style>
+:root{
+  --bg:#f5f7fa;--card:#fff;--ink:#1f2937;--muted:#6b7280;--line:#e5e7eb;
+  --brand:#0e7c66;--brand-dark:#0a5c4d;--warn:#b45309;--danger:#b91c1c;--ok:#15803d;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Microsoft YaHei",system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
+header{background:var(--brand);color:#fff;padding:12px 24px;display:flex;align-items:center;gap:16px}
+header h1{font-size:18px;font-weight:600}
+header .spacer{flex:1}
+header button{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:6px;padding:6px 14px;cursor:pointer}
+main{max-width:1080px;margin:20px auto;padding:0 16px}
+.tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.tabs button{border:1px solid var(--line);background:var(--card);border-radius:6px;padding:8px 18px;cursor:pointer;font-size:14px}
+.tabs button.active{background:var(--brand);color:#fff;border-color:var(--brand)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px;margin-bottom:16px}
+.bar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.bar input,.bar select{border:1px solid var(--line);border-radius:6px;padding:7px 10px;font-size:14px}
+.bar .btn{border:none;border-radius:6px;padding:7px 14px;cursor:pointer;background:var(--brand);color:#fff}
+.bar .btn.ghost{background:#eef2f1;color:var(--brand-dark)}
+table{width:100%;border-collapse:collapse}
+th,td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;font-size:13px;vertical-align:top}
+th{color:var(--muted);font-weight:500;background:#fafbfc}
+td .mini{border:1px solid var(--line);background:#fff;border-radius:4px;padding:3px 8px;cursor:pointer;font-size:12px}
+td .mini.warn{color:var(--warn)} td .mini.danger{color:var(--danger)} td .mini.ok{color:var(--ok)}
+.pill{display:inline-block;border-radius:999px;padding:2px 10px;font-size:12px}
+.pill.active{background:#dcfce7;color:var(--ok)} .pill.disabled{background:#fee2e2;color:var(--danger)}
+.pill.pending{background:#fef3c7;color:var(--warn)} .pill.corrected{background:#dbeafe;color:#1d4ed8} .pill.confirmed{background:#dcfce7;color:var(--ok)}
+.muted{color:var(--muted)} .lowconf{color:var(--danger);font-weight:600}
+.pager{display:flex;gap:8px;align-items:center;margin-top:10px}
+.pager button{border:1px solid var(--line);background:#fff;border-radius:4px;padding:4px 10px;cursor:pointer}
+.flash{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;border-radius:6px;padding:8px 18px;font-size:13px;display:none;z-index:9}
+dialog{border:none;border-radius:10px;padding:20px;width:520px;max-width:92vw}
+dialog::backdrop{background:rgba(0,0,0,.4)}
+dialog h3{margin-bottom:12px;font-size:16px}
+dialog label{display:block;margin:10px 0 4px;color:var(--muted);font-size:13px}
+dialog input,dialog textarea{width:100%;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:14px;font-family:inherit}
+dialog textarea{min-height:70px;resize:vertical}
+dialog .row{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
+#login{max-width:360px;margin:12vh auto}
+#login .card{padding:28px}
+#login h2{margin-bottom:6px;color:var(--brand-dark)}
+#login input{width:100%;border:1px solid var(--line);border-radius:6px;padding:9px 10px;font-size:14px;margin-bottom:12px}
+#login .btn{width:100%;border:none;border-radius:6px;padding:10px;background:var(--brand);color:#fff;font-size:15px;cursor:pointer}
+.hidden{display:none}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px}
+.kv b{color:var(--muted);font-weight:500}
+.badge-num{display:inline-block;background:var(--danger);color:#fff;border-radius:999px;font-size:12px;padding:1px 8px;margin-left:6px}
+.statgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.statgrid .card{margin:0;text-align:center}
+.statgrid .num{font-size:24px;font-weight:700;color:var(--brand-dark)}
+</style>
+</head>
+<body>
+
+<!-- 登录 -->
+<section id="login">
+  <div class="card">
+    <h2>颐康宝 · 后台管理</h2>
+    <p class="muted" style="margin-bottom:18px">M3 基础版 — 管理员登录</p>
+    <input id="lg-user" placeholder="用户名（默认 admin）">
+    <input id="lg-pass" type="password" placeholder="密码">
+    <button class="btn" onclick="doLogin()">登 录</button>
+    <p id="lg-err" class="muted" style="color:var(--danger);margin-top:10px"></p>
+  </div>
+</section>
+
+<!-- 主界面 -->
+<div id="main" class="hidden">
+<header>
+  <h1>颐康宝 · 后台管理</h1><span class="muted" style="color:#cfe8e2">M3 基础版</span>
+  <div class="spacer"></div>
+  <span id="who"></span>
+  <button onclick="logout()">退出</button>
+</header>
+<main>
+  <div class="tabs">
+    <button data-tab="users" class="active">用户管理</button>
+    <button data-tab="records">病历解析记录</button>
+    <button data-tab="alerts">低置信度报警<span id="alert-badge" class="badge-num hidden"></span></button>
+    <button data-tab="audit">审计留痕</button>
+  </div>
+
+  <!-- 用户管理 -->
+  <section id="tab-users">
+    <div class="card">
+      <div class="bar">
+        <input id="u-kw" placeholder="手机号 / 姓名搜索" style="width:220px">
+        <select id="u-status"><option value="">全部状态</option><option value="active">正常</option><option value="disabled">已禁用</option></select>
+        <button class="btn" onclick="loadUsers(1)">查询</button>
+        <button class="btn ghost" onclick="exportUsers()">导出 CSV</button>
+      </div>
+      <table><thead><tr><th>手机号</th><th>姓名</th><th>状态</th><th>注册时间</th><th>操作</th></tr></thead>
+      <tbody id="u-body"></tbody></table>
+      <div class="pager" id="u-pager"></div>
+    </div>
+  </section>
+
+  <!-- 病历解析记录 -->
+  <section id="tab-records" class="hidden">
+    <div class="card">
+      <div class="bar">
+        <select id="r-status"><option value="">全部状态</option><option value="pending">待确认</option><option value="confirmed">已确认</option><option value="corrected">已修正</option></select>
+        <button class="btn" onclick="loadRecords(1)">查询</button>
+      </div>
+      <table><thead><tr><th>诊断</th><th>置信度</th><th>状态</th><th>OCR 原文</th><th>修正人</th><th>操作</th></tr></thead>
+      <tbody id="r-body"></tbody></table>
+      <div class="pager" id="r-pager"></div>
+    </div>
+  </section>
+
+  <!-- 低置信度报警 -->
+  <section id="tab-alerts" class="hidden">
+    <div class="card">
+      <div class="bar"><span class="muted">置信度 &lt; 0.7 的解析记录（最可疑排最前），建议人工修正处理</span></div>
+      <table><thead><tr><th>诊断</th><th>置信度</th><th>状态</th><th>用户</th><th>操作</th></tr></thead>
+      <tbody id="a-body"></tbody></table>
+      <div class="pager" id="a-pager"></div>
+    </div>
+  </section>
+
+  <!-- 审计留痕 -->
+  <section id="tab-audit" class="hidden">
+    <div class="card">
+      <div class="bar">
+        <select id="al-action"><option value="">全部动作</option><option value="record_correct">记录修正</option><option value="user_disable">禁用用户</option><option value="user_enable">解禁用户</option></select>
+        <button class="btn" onclick="loadAudit(1)">查询</button>
+      </div>
+      <table><thead><tr><th>时间</th><th>动作</th><th>对象</th><th>改动摘要</th><th>操作</th></tr></thead>
+      <tbody id="al-body"></tbody></table>
+      <div class="pager" id="al-pager"></div>
+    </div>
+  </section>
+</main>
+</div>
+
+<!-- 修正对话框 -->
+<dialog id="dlg-correct">
+  <h3>人工修正解析记录</h3>
+  <p class="muted" id="dlg-rec-id" style="margin-bottom:8px"></p>
+  <label>诊断</label><input id="cf-diagnosis">
+  <label>置信度（0~1）</label><input id="cf-confidence" type="number" step="0.01" min="0" max="1">
+  <label>指标（JSON 数组）</label><textarea id="cf-indicators" placeholder='[{"name":"血压","value":"140/90","level":"偏高"}]'></textarea>
+  <label>用药（JSON 数组）</label><textarea id="cf-medications" placeholder='[{"name":"阿司匹林","dosage":"100mg","frequency":"每日一次"}]'></textarea>
+  <div class="row">
+    <button class="btn ghost" onclick="dlgCorrect.close()">取消</button>
+    <button class="btn" onclick="submitCorrect()">保存修正（留痕）</button>
+  </div>
+</dialog>
+
+<!-- 时间轴对话框 -->
+<dialog id="dlg-timeline">
+  <h3>用户档案时间轴</h3>
+  <div class="kv" id="tl-user"></div>
+  <div id="tl-list" style="margin-top:12px"></div>
+  <div class="row"><button class="btn ghost" onclick="dlgTimeline.close()">关闭</button></div>
+</dialog>
+
+<!-- 快照对比对话框 -->
+<dialog id="dlg-snap">
+  <h3>修正前后快照</h3>
+  <div class="kv" id="snap-before"></div>
+  <h3 style="margin-top:14px">修正后</h3>
+  <div class="kv" id="snap-after"></div>
+  <div class="row"><button class="btn ghost" onclick="dlgSnap.close()">关闭</button></div>
+</dialog>
+
+<div class="flash" id="flash"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+let TOKEN = sessionStorage.getItem("ykb_admin_token") || "";
+let CORRECTING_ID = "";
+const pagerState = {users:1,records:1,alerts:1,audit:1};
+
+function flash(msg){const f=$("flash");f.textContent=msg;f.style.display="block";setTimeout(()=>f.style.display="none",2600);}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function fmtTime(s){return s?s.replace("T"," ").slice(0,19):"-";}
+
+async function api(path, opts={}){
+  const headers = Object.assign({"Content-Type":"application/json"}, TOKEN?{"Authorization":"Bearer "+TOKEN}:{}, opts.headers||{});
+  const resp = await fetch("/api/admin"+path, Object.assign({}, opts, {headers}));
+  let body; try{ body = await resp.json(); }catch(e){ body = {code:-1,msg:"响应解析失败"}; }
+  if(body.code===1401){ showLogin(); throw new Error("登录过期"); }
+  if(body.code!==0) throw new Error(body.msg||("code "+body.code));
+  return body.data;
+}
+
+/* ---- 登录 ---- */
+async function doLogin(){
+  $("lg-err").textContent="";
+  try{
+    const resp = await fetch("/api/admin/login",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({username:$("lg-user").value.trim()||"admin",password:$("lg-pass").value})});
+    const body = await resp.json();
+    if(body.code!==0){ $("lg-err").textContent = body.msg||"登录失败"; return; }
+    TOKEN = body.data.token; sessionStorage.setItem("ykb_admin_token",TOKEN);
+    $("who").textContent = body.data.admin.username;
+    showMain();
+  }catch(e){ $("lg-err").textContent = "网络异常："+e.message; }
+}
+function logout(){ TOKEN=""; sessionStorage.removeItem("ykb_admin_token"); showLogin(); }
+function showLogin(){ $("login").classList.remove("hidden"); $("main").classList.add("hidden"); }
+function showMain(){
+  $("login").classList.add("hidden"); $("main").classList.remove("hidden");
+  loadStats(); loadUsers(1); loadAlertsCount();
+}
+
+/* ---- Tab 切换 ---- */
+document.querySelectorAll(".tabs button").forEach(b=>{
+  b.addEventListener("click",()=>{
+    document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active");
+    ["users","records","alerts","audit"].forEach(t=>$("tab-"+t).classList.toggle("hidden",t!==b.dataset.tab));
+    ({users:()=>loadUsers(pagerState.users),records:()=>loadRecords(pagerState.records),
+      alerts:()=>loadAlerts(pagerState.alerts),audit:()=>loadAudit(pagerState.audit)})[b.dataset.tab]();
+  });
+});
+
+function pager(el, page, total, pageSize, fn){
+  const pages = Math.max(1, Math.ceil(total/pageSize));
+  el.innerHTML = "";
+  if(pages<=1){ el.innerHTML = `<span class="muted">共 ${total} 条</span>`; return; }
+  const mk=(p,label,dis)=>`<button ${dis?"disabled":""} data-p="${p}">${label}</button>`;
+  el.innerHTML = mk(page-1,"上一页",page<=1)+`<span class="muted">第 ${page} / ${pages} 页 · 共 ${total} 条</span>`+mk(page+1,"下一页",page>=pages);
+  el.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>fn(+b.dataset.p)));
+}
+
+/* ---- 用户管理 ---- */
+async function loadUsers(page){
+  pagerState.users = page;
+  const kw = $("u-kw").value.trim(), st = $("u-status").value;
+  const qs = new URLSearchParams({page, page_size:10}); if(kw) qs.set("keyword",kw); if(st) qs.set("status",st);
+  const d = await api("/users?"+qs);
+  $("u-body").innerHTML = d.items.map(u=>`<tr>
+    <td>${esc(u.phone)}</td><td>${esc(u.name||"-")}</td>
+    <td><span class="pill ${u.status}">${u.status==="active"?"正常":"已禁用"}</span></td>
+    <td class="muted">${fmtTime(u.created_at)}</td>
+    <td>
+      <button class="mini" onclick="showTimeline('${u.id}')">档案时间轴</button>
+      ${u.status==="active"
+        ?`<button class="mini danger" onclick="setUser('${u.id}','disable')">禁用</button>`
+        :`<button class="mini ok" onclick="setUser('${u.id}','enable')">解禁</button>`}
+    </td></tr>`).join("") || `<tr><td colspan="5" class="muted">暂无数据</td></tr>`;
+  pager($("u-pager"), page, d.total, d.page_size, loadUsers);
+}
+async function setUser(id, action){
+  try{ await api(`/users/${id}/${action}`,{method:"POST"}); flash(action==="disable"?"已禁用（留痕）":"已解禁（留痕）"); loadUsers(pagerState.users); }
+  catch(e){ flash("失败："+e.message); }
+}
+function exportUsers(){
+  // 带 token 的 CSV 下载
+  fetch("/api/admin/users/export",{headers:{"Authorization":"Bearer "+TOKEN}})
+    .then(r=>r.ok?r.blob():Promise.reject("导出失败"))
+    .then(b=>{const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="users_export.csv";a.click();})
+    .catch(e=>flash(String(e)));
+}
+async function showTimeline(userId){
+  const d = await api(`/users/${userId}/timeline`);
+  $("tl-user").innerHTML = `<b>姓名</b><span>${esc(d.user.name||"-")}</span><b>手机号</b><span>${esc(d.user.phone)}</span><b>状态</b><span>${d.user.status==="active"?"正常":"已禁用"}</span>`;
+  $("tl-list").innerHTML = d.timeline.length ? d.timeline.map(r=>`
+    <div style="border-left:3px solid var(--brand);padding:6px 12px;margin:10px 0">
+      <div><b>${esc(r.diagnosis||"（未诊断）")}</b> <span class="pill ${r.status}">${r.status}</span>
+        <span class="${r.confidence<0.7?"lowconf":"muted"}" style="margin-left:8px">置信度 ${r.confidence}</span></div>
+      <div class="muted">记录日期：${fmtTime(r.record_date)||fmtTime(r.created_at)}</div>
+      ${(r.indicators||[]).map(i=>`<span class="pill pending" style="margin:4px 4px 0 0">${esc(i.name)} ${esc(i.value)} ${esc(i.level||"")}</span>`).join("")}
+      ${(r.medications||[]).map(m=>`<span class="pill confirmed" style="margin:4px 4px 0 0">${esc(m.name)} ${esc(m.dosage||"")} ${esc(m.frequency||"")}</span>`).join("")}
+    </div>`).join("") : `<p class="muted" style="margin-top:10px">暂无档案记录</p>`;
+  dlgTimeline.showModal();
+}
+
+/* ---- 病历解析记录 ---- */
+async function loadRecords(page){
+  pagerState.records = page;
+  const qs = new URLSearchParams({page, page_size:10});
+  if($("r-status").value) qs.set("status",$("r-status").value);
+  const d = await api("/records?"+qs);
+  $("r-body").innerHTML = d.items.map(r=>`<tr>
+    <td>${esc(r.diagnosis||"（未诊断）")}<div class="muted" style="font-size:12px">${fmtTime(r.created_at)}</div></td>
+    <td class="${r.confidence<0.7?"lowconf":""}">${r.confidence}</td>
+    <td><span class="pill ${r.status}">${r.status}</span></td>
+    <td class="muted" style="max-width:220px">${esc((r.ocr_raw_text||"").slice(0,60))}${(r.ocr_raw_text||"").length>60?"…":""}</td>
+    <td class="muted">${esc(r.corrected_by||"-")}</td>
+    <td><button class="mini warn" onclick='openCorrect(${JSON.stringify(r).replaceAll("'","&#39;")})'>修正</button></td>
+  </tr>`).join("") || `<tr><td colspan="6" class="muted">暂无数据</td></tr>`;
+  pager($("r-pager"), page, d.total, d.page_size, loadRecords);
+}
+function openCorrect(r){
+  CORRECTING_ID = r.id;
+  $("dlg-rec-id").textContent = "记录 ID："+r.id;
+  $("cf-diagnosis").value = r.diagnosis||"";
+  $("cf-confidence").value = r.confidence;
+  $("cf-indicators").value = JSON.stringify(r.indicators||[],null,1);
+  $("cf-medications").value = JSON.stringify(r.medications||[],null,1);
+  dlgCorrect.showModal();
+}
+async function submitCorrect(){
+  let indicators, medications;
+  try{ indicators = JSON.parse($("cf-indicators").value||"[]"); }catch(e){ flash("指标 JSON 格式不对"); return; }
+  try{ medications = JSON.parse($("cf-medications").value||"[]"); }catch(e){ flash("用药 JSON 格式不对"); return; }
+  try{
+    const d = await api(`/records/${CORRECTING_ID}/correct`,{method:"POST",body:JSON.stringify({
+      diagnosis:$("cf-diagnosis").value||null,
+      confidence:parseFloat($("cf-confidence").value)||null,
+      indicators, medications })});
+    dlgCorrect.close();
+    flash(`修正完成（审计 ${d.audit_id.slice(0,8)}…，corrected_by 留痕）`);
+    loadRecords(pagerState.records); loadAlertsCount();
+  }catch(e){ flash("修正失败："+e.message); }
+}
+
+/* ---- 低置信度报警 ---- */
+async function loadAlerts(page){
+  pagerState.alerts = page;
+  const d = await api(`/alerts/low-confidence?page=${page}&page_size=10`);
+  $("a-body").innerHTML = d.items.map(r=>`<tr>
+    <td>${esc(r.diagnosis||"（未诊断）")}</td>
+    <td class="lowconf">${r.confidence}</td>
+    <td><span class="pill ${r.status}">${r.status}</span></td>
+    <td class="muted">${esc(r.user_id.slice(0,8))}…</td>
+    <td><button class="mini warn" onclick='openCorrect(${JSON.stringify(r).replaceAll("'","&#39;")})'>去修正</button></td>
+  </tr>`).join("") || `<tr><td colspan="5" class="muted">🎉 暂无低置信度报警</td></tr>`;
+  pager($("a-pager"), page, d.total, d.page_size, loadAlerts);
+}
+async function loadAlertsCount(){
+  try{
+    const d = await api("/alerts/low-confidence?page=1&page_size=1");
+    const b = $("alert-badge");
+    b.classList.toggle("hidden", d.total===0);
+    b.textContent = d.total;
+  }catch(e){}
+}
+
+/* ---- 审计留痕 ---- */
+async function loadAudit(page){
+  pagerState.audit = page;
+  const qs = new URLSearchParams({page, page_size:10});
+  if($("al-action").value) qs.set("action",$("al-action").value);
+  const d = await api("/audit-logs?"+qs);
+  $("al-body").innerHTML = d.items.map(l=>{
+    const diff = Object.keys(l.after_snapshot||{}).filter(k=>JSON.stringify(l.before_snapshot?.[k])!==JSON.stringify(l.after_snapshot?.[k]))
+      .map(k=>`${k}: ${esc(JSON.stringify(l.before_snapshot?.[k]??"∅"))} → ${esc(JSON.stringify(l.after_snapshot?.[k]))}`).join("<br>") || "（无字段级改动）";
+    const replayBtn = l.action==="record_correct"
+      ? `<button class="mini" onclick="replay('${l.id}')">复跑</button>
+         <button class="mini" onclick='showSnap(${JSON.stringify(l).replaceAll("'","&#39;")})'>快照</button>` : "";
+    return `<tr><td class="muted">${fmtTime(l.created_at)}</td><td>${esc(l.action)}</td>
+      <td class="muted">${esc(l.target_type)} ${esc(l.target_id.slice(0,8))}…</td>
+      <td style="max-width:340px;font-size:12px">${diff}</td><td>${replayBtn}</td></tr>`;
+  }).join("") || `<tr><td colspan="5" class="muted">暂无留痕</td></tr>`;
+  pager($("al-pager"), page, d.total, d.page_size, loadAudit);
+}
+async function replay(logId){
+  try{
+    const d = await api(`/audit-logs/${logId}/replay`,{method:"POST"});
+    flash(d.matched ? `复跑成功：重放结果与留痕快照一致（matched=true）` : `复跑完成，但当前状态与快照不一致，请人工核对`);
+  }catch(e){ flash("复跑失败："+e.message); }
+}
+function showSnap(l){
+  const render = (snap)=>Object.entries(snap||{}).map(([k,v])=>`<b>${esc(k)}</b><span>${esc(typeof v==="string"?v:JSON.stringify(v))}</span>`).join("");
+  $("snap-before").innerHTML = render(l.before_snapshot)||"<span class='muted'>空</span>";
+  $("snap-after").innerHTML = render(l.after_snapshot)||"<span class='muted'>空</span>";
+  dlgSnap.showModal();
+}
+
+/* ---- 基础统计（顶部卡片）---- */
+async function loadStats(){
+  try{
+    const d = await api("/stats");
+    const el = $("tab-users");
+    const old = $("stats-bar"); if(old) old.remove();
+    const div = document.createElement("div");
+    div.id="stats-bar"; div.className="statgrid"; div.style.marginBottom="16px";
+    div.innerHTML = `
+      <div class="card"><div class="num">${d.users.total}</div><div class="muted">用户总数</div></div>
+      <div class="card"><div class="num">${d.users.disabled}</div><div class="muted">禁用用户</div></div>
+      <div class="card"><div class="num">${d.records.total}</div><div class="muted">解析记录</div></div>
+      <div class="card"><div class="num">${d.records.pending}</div><div class="muted">待确认</div></div>
+      <div class="card"><div class="num">${d.records.corrected}</div><div class="muted">已修正</div></div>
+      <div class="card"><div class="num" style="color:var(--danger)">${d.low_confidence_alerts}</div><div class="muted">低置信度报警</div></div>`;
+    el.prepend(div);
+  }catch(e){}
+}
+
+/* ---- 启动 ---- */
+if(TOKEN){
+  // 有旧 token 先试一下，失效自动落回登录页
+  api("/stats").then(()=>{ $("who").textContent="admin"; showMain(); }).catch(()=>{ TOKEN=""; showLogin(); });
+}else{
+  showLogin();
+}
+$("lg-pass").addEventListener("keydown",e=>{ if(e.key==="Enter") doLogin(); });
+</script>
+</body>
+</html>

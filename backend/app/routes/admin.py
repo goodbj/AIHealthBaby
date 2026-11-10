@@ -293,7 +293,8 @@ async def user_timeline(
         await db.execute(
             select(HealthRecord)
             .where(HealthRecord.user_id == user_id)
-            .order_by(HealthRecord.record_date.desc().nullslast(), HealthRecord.created_at.desc())
+            # 展示口径 = 排序口径：有 record_date 用之，否则退 created_at（避免混排不单调）
+            .order_by(func.coalesce(HealthRecord.record_date, HealthRecord.created_at).desc())
         )
     ).scalars().all()
     timeline = [
@@ -516,7 +517,8 @@ async def replay_audit_log(
             except ValueError:
                 return fail(1400, f"快照 record_date 无法解析：{value}")
         setattr(r, field, value)
-        applied[field] = value
+        # 响应体走 JSON，datetime 转 ISO
+        applied[field] = value.isoformat() if isinstance(value, datetime) else value
     r.status = "corrected"
     r.corrected_by = admin.id
     after = _record_snapshot(r)
