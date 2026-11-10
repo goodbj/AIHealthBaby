@@ -73,7 +73,7 @@ fun RecordDetailScreen(
                                         .size(48.dp)
                                         .clip(RoundedCornerShape(8.dp))
                                         .background(HealthGreen.copy(alpha = 0.1f)),
-                                    contentAlignment = androidx.compose.ui.layout.ContentAlignment.Center
+                                    contentAlignment = androidx.compose.ui.Alignment.Center
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Description,

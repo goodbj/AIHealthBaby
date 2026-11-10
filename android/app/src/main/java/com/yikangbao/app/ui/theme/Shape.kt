@@ -2,6 +2,7 @@ package com.yikangbao.app.ui.theme
 
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Shapes
+import androidx.compose.ui.unit.dp
 
 // 苹果风格圆角 - iOS Human Interface Guidelines
 // iOS常用圆角尺寸: 8pt, 12pt, 16pt, 20pt, 24pt

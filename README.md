@@ -5,20 +5,21 @@
 
 > 产品名在产品需求文档中为「颐康宝（暂定名）」。代码层统一使用 `YiKangBao`。
 
-## 仓库现状
+## 仓库现状（M4）
 
 | 模块 | 状态 | 说明 |
 |------|------|------|
-| `doc/` | ✅ 已完成 | 需求文档（PRD）、扩展需求、商业计划书 |
-| `android/` | 🟡 脚手架较完整 | Jetpack Compose 客户端（登录/语音/病历/对话/提醒），但**尚无后端可联调** |
-| 后端（FastAPI） | ❌ 缺失 | PRD 第 7 节要求但未实现（LLM 抽象层 + DeepSeek + 钩子 + 调度器） |
+| `doc/` | ✅ 已完成 | 需求文档（PRD）、扩展需求、商业计划书、API 文档、扩展开发指南 |
+| `backend/` | ✅ M0~M4 已交付 | FastAPI：LLM 抽象层 + 钩子 + 调度器 + 提醒路由 + M3 后台管理；压测 ≥200 QPS；安全扫描 0 高危 |
+| `android/` | ✅ 可构建 | Jetpack Compose 客户端（登录/语音/病历/对话/提醒），release APK 可打包安装 |
 
 ## 目录结构
 
 ```
 AIHealthBaby/
-├── doc/            # 产品需求文档、扩展需求、商业计划书
+├── doc/            # PRD、扩展需求、商业计划书、API.md、EXTENSION.md、reports/（压测+安全报告）
 ├── android/        # Jetpack Compose 客户端（包名 com.yikangbao.app）
+├── backend/        # FastAPI 后端（app/、migrations/、tests/、config/）
 └── README.md       # 本文件
 ```
 
@@ -49,11 +50,21 @@ cd android
 gradlew.bat assembleDebug    # Windows
 ```
 
-## 后端（待实现）
+## 后端（FastAPI）
 
-PRD 规划：Python 3.11 + FastAPI，SQLite（开发）/ PostgreSQL（生产），OCR 解析，
-可切换大模型抽象层（默认 DeepSeek），事件钩子注册/触发机制，APScheduler 定时提醒。
-API 契约以 `doc/Readme.md` 为准。
+Python 3.13 + FastAPI + SQLAlchemy 2.x（异步）+ Alembic + APScheduler。
+SQLite（开发）/ PostgreSQL（生产），可切换大模型抽象层（默认 DeepSeek，离线桩兜底），
+事件钩子注册/触发机制，统一响应封装 `{ code, msg, data, trace_id }`。
+
+```bash
+cd backend
+pip install -r requirements.txt
+export YKB_DATABASE_URL="sqlite+aiosqlite:///./yikangbao.db"
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+测试：`PYTHONPATH=. pytest -q`（M4：22 用例全绿）。API 契约见 `doc/API.md`，
+扩展开发见 `doc/EXTENSION.md`。业务路由：`/api/chat`、`/api/reminders`、`/api/admin/*`、`/api/health`。
 
 ## 文档
 

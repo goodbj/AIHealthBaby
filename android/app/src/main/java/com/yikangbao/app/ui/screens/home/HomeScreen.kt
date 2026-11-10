@@ -217,7 +217,7 @@ fun HomeScreen(
                                         ) == android.content.pm.PackageManager.PERMISSION_GRANTED
                                     ) {
                                         viewModel.startVoiceInput()
-                                        tryAwait()
+                                        tryAwaitRelease()
                                         viewModel.stopVoiceInput()
                                     } else {
                                         showPermissionDialog = true

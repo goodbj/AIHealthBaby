@@ -30,10 +30,15 @@ import com.yikangbao.app.ui.theme.TextQuaternary
 import com.yikangbao.app.ui.theme.TextTertiary
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.MessageCircle
-import androidx.compose.material.icons.filled.FileText
-import androidx.compose.material.icons.filled.Bell
+import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.runtime.remember
+import androidx.compose.ui.unit.sp
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 
 @Composable
 fun AppleBottomNavigation(
@@ -48,17 +53,17 @@ fun AppleBottomNavigation(
         ),
         NavigationItem(
             route = Screen.Chat.route,
-            icon = Icons.Default.MessageCircle,
+            icon = Icons.Default.Chat,
             label = "对话"
         ),
         NavigationItem(
             route = Screen.Records.route,
-            icon = Icons.Default.FileText,
+            icon = Icons.Default.Description,
             label = "档案"
         ),
         NavigationItem(
             route = Screen.Reminder.route,
-            icon = Icons.Default.Bell,
+            icon = Icons.Default.Notifications,
             label = "提醒"
         ),
         NavigationItem(
@@ -138,18 +143,18 @@ fun AppleNavItem(
         ) {
             androidx.compose.animation.AnimatedVisibility(
                 visible = isSelected,
-                enter = androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.tween(150)),
-                exit = androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.tween(150))
+                enter = fadeIn(animationSpec = tween(150)),
+                exit = fadeOut(animationSpec = tween(150))
             ) {
                 Box(
                     modifier = Modifier
                         .size(28.dp)
                         .background(
-                            color = HealthGreen.copy(alpha = 0.1),
+                            color = HealthGreen.copy(alpha = 0.1f),
                             shape = RoundedCornerShape(8.dp)
                         ),
                     contentAlignment = Alignment.Center
-                )
+                ) {}
             }
 
             Icon(

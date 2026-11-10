@@ -12,6 +12,7 @@
 # Android app build outputs
 android/app/build/
 android/build/
+android/tools/
 
 # ─────────────── Python ───────────────
 # (kept ready for the planned FastAPI backend; do NOT ignore source)

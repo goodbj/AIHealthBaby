@@ -1,0 +1,47 @@
+{
+  "config": {
+    "base_url": "http://127.0.0.1:8000",
+    "concurrency": 100,
+    "duration_s": 15
+  },
+  "correctness_sample": {
+    "health_ok": true,
+    "chat_ok": true
+  },
+  "results": [
+    {
+      "endpoint": "/api/health",
+      "method": "GET",
+      "total_requests": 4000,
+      "ok_requests": 4000,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "rps": 266.7,
+      "latency_ms": {
+        "avg": 376.99,
+        "p50": 210.4,
+        "p95": 1121.36,
+        "p99": 3919.67,
+        "max": 6034.54
+      }
+    },
+    {
+      "endpoint": "/api/chat",
+      "method": "POST",
+      "total_requests": 3232,
+      "ok_requests": 3232,
+      "errors": 0,
+      "error_rate_pct": 0.0,
+      "rps": 215.5,
+      "latency_ms": {
+        "avg": 467.22,
+        "p50": 266.75,
+        "p95": 1507.98,
+        "p99": 4072.77,
+        "max": 5689.18
+      }
+    }
+  ],
+  "meets_100qps_target": true,
+  "timestamp": "2026-11-10T08:07:59+0800"
+}

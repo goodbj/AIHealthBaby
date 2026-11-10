@@ -1,5 +1,6 @@
 package com.yikangbao.app.di
 
+import com.yikangbao.app.BuildConfig
 import com.yikangbao.app.data.api.YiKangBaoApi
 import com.yikangbao.app.data.repository.AuthRepositoryImpl
 import com.yikangbao.app.data.repository.ChatRepositoryImpl
@@ -27,8 +28,9 @@ object NetworkModule {
 
     // Configured via android/gradle.properties (BASE_URL) and overridable in
     // android/local.properties. Falls back to a local dev server.
-    private const val BASE_URL =
-        if (BuildConfig.BASE_URL.isNotBlank()) BuildConfig.BASE_URL else "http://10.0.2.2:8000/"
+    // 注意：BuildConfig 引用必须放在方法体内——KSP（Hilt）解析早于 BuildConfig
+    // 生成任务，模块顶层字段会在 kspReleaseKotlin 阶段报 NonExistentClass。
+    private fun baseUrl(): String = BuildConfig.BASE_URL
 
     @Provides
     @Singleton
@@ -48,7 +50,7 @@ object NetworkModule {
     @Singleton
     fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
         return Retrofit.Builder()
-            .baseUrl(BASE_URL)
+            .baseUrl(baseUrl())
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()

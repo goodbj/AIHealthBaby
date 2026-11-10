@@ -16,9 +16,11 @@ from ..models import Conversation
 from ..services.context import build_health_context, context_summary
 from .response import fail, ok
 from .reminders import router as reminders_router
+from .records import router as records_router  # noqa: E402  M1 病历闭环
 
 api_router = APIRouter()
 api_router.include_router(reminders_router)
+api_router.include_router(records_router, prefix="/records")
 
 # M3：后台管理子路由（用户管理/记录修正/低置信度报警/审计留痕）
 from .admin import admin_router  # noqa: E402
